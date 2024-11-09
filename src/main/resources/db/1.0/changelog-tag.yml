@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      author: chous
+      id: 1.0.0
+      changes:
+        - tagDatabase:
+            tag: 1.0
+
+  - include:
+      file: 02-create-table-driver.sql
+      relativeToChangelogFile: true
+  - include:
+      file: 01-create-table-constructor.sql
+      relativeToChangelogFile: true
