@@ -5,8 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,7 +13,6 @@ import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 
-import java.math.BigDecimal;
 import java.util.Objects;
 
 @Entity
@@ -24,36 +21,15 @@ import java.util.Objects;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "driver")
-public class Driver {
+@Table(name = "season")
+public class Season {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "broadcast_name")
-    private String broadcastName;
-
-    @Column(name = "first_name")
-    private String firstName;
-
-    @Column(name = "last_name")
-    private String lastName;
-
-    @Column(name = "full_name")
-    private String fullName;
-
-    @Column(name = "name_acronym", length = 3)
-    private String nameAcronym;
-
-    @Column(name = "country_code", length = 3)
-    private String countryCode;
-
-    @Column(name = "driver_number")
-    private Integer driverNumber;
-
-    @Column(name = "headshot_url")
-    private String headshotUrl;
+    @Column(nullable = false, unique = true)
+    private Integer year;
 
     @Override
     public final boolean equals(final Object o) {
@@ -75,7 +51,7 @@ public class Driver {
         if (thisEffectiveClass != oEffectiveClass) {
             return false;
         }
-        final Driver that = (Driver) o;
+        final Season that = (Season) o;
         return getId() != null && Objects.equals(getId(), that.getId());
     }
 

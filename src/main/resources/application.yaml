@@ -1,89 +1,95 @@
-project:
-  name: F1Fantasy
-  version: "0.0.1-SNAPSHOT"
-validation:
-  enabled: true
-
-app:
-  cors:
-    allowedOrigins: ${CORS_ALLOWED_ORIGINS:*}
-    allowCredentials: true
-  openapi:
-    local_url: ${PROTOCOL:http://127.0.0.1}${SERVER_PORT:8080}
-    develop-url: ${PROTOCOL:https://}ingress.dev.server-name.ru
-    ift-url: ${PROTOCOL:https://}ingress.ift-server-name.ru
-
-server:
-  port: ${SERVER_PORT:8080}
-  compression:
-    enabled: true
+#project:
+#  name: F1Fantasy
+#  version: "0.0.1-SNAPSHOT"
+#validation:
+#  enabled: true
+#
+#app:
+#  cors:
+#    allowedOrigins: ${CORS_ALLOWED_ORIGINS:*}
+#    allowCredentials: true
+#  openapi:
+#    local_url: ${PROTOCOL:http://127.0.0.1}${SERVER_PORT:8080}
+#    develop-url: ${PROTOCOL:https://}ingress.dev.server-name.ru
+#    ift-url: ${PROTOCOL:https://}ingress.ift-server-name.ru
+#
+#server:
+#  port: ${SERVER_PORT:8080}
+#  compression:
+#    enabled: true
 
 spring:
   application:
     name: f1fantasy
-  jackson:
-    serialization:
-      WRITE_DATES_AS_TIMESTAMPS: false
-    time-zone: UTC
-  jmx:
-    enabled: false
-  liquibase:
-    #    contexts: ${spring.profiles.active}
-    enabled: ${LIQUIBASE_ENABLED:false}
-    defaultSchema: ${DB_SCHEMA:main}
-    change-log: ${CHANGE_LOG_PATH:classpath:db/changelog-master.xml}
-    user: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root}
-    url: ${DB_DRIVER}://${DB_HOST}:${DB_PORT}/${DB_NAME}?${DB_PARAM}
-  main:
-    banner-mode: off
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${DB_DRIVER}://${DB_HOST}:${DB_PORT}/${DB_NAME}?${DB_PARAM}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-    type: com.zaxxer.hikari.HikariDataSource
-    hikari:
-      connectionTimeout: 30000
-      idleTimeout: 30000
-      maxLifetime: 2000000
-      maximumPoolSize: 50
-      minimumIdle: 10
-      poolName: SpringBootJPAHikariCP
-      schema: ${DB_SCHEMA:main}
-      transaction-isolation: TRANSACTION_READ_COMMITTED
+#    type: com.zaxxer.hikari.HikariDataSource
+#    hikari:
+#      connectionTimeout: 30000
+#      idleTimeout: 30000
+#      maxLifetime: 2000000
+#      maximumPoolSize: 50
+#      minimumIdle: 10
+#      poolName: SpringBootJPAHikariCP
+#      schema: ${DB_SCHEMA:main}
+#      transaction-isolation: TRANSACTION_READ_COMMITTED
   jpa:
     generate-ddl: false
     hibernate:
-      connection:
-        provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+#      connection:
+#        provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
       ddl-auto: validate
-    open-in-view: true
+#    open-in-view: true
     properties:
       hibernate:
-        default_schema: ${DB_SCHEMA}
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        type:
-          preferred_duration_jdbc_type: INTERVAL_SECOND #for correct operation of the duration field
-        jdbc:
-          lob:
-            non_contextual_creation: true
-    show-sql: true
-  cloud:
-    openfeign:
-      config:
-        agent-resolver-client:
-          url: http://${AGENT_RESOLVER_CLIENT_HOST:127.0.0.1}:${AGENT_RESOLVER_CLIENT_PORT:8081}
-          connectionTimeout: 5000
+#        default_schema: ${DB_SCHEMA}
+#        dialect: org.hibernate.dialect.PostgreSQLDialect
+#        type:
+#          preferred_duration_jdbc_type: INTERVAL_SECOND #for correct operation of the duration field
+#        jdbc:
+#          lob:
+#            non_contextual_creation: true
+#    show-sql: true
+#  jackson:
+#    serialization:
+#      WRITE_DATES_AS_TIMESTAMPS: false
+#    time-zone: UTC
+#  jmx:
+#    enabled: false
+  liquibase:
+#    contexts: ${spring.profiles.active}
+#    enabled: ${LIQUIBASE_ENABLED:false}
+#    defaultSchema: ${DB_SCHEMA:main}
+    change-log: ${CHANGE_LOG_PATH:classpath:db/changelog-master.xml}
+#    user: ${DB_USERNAME:root}
+#    password: ${DB_PASSWORD:root}
+#    url: ${DB_DRIVER}://${DB_HOST}:${DB_PORT}/${DB_NAME}?${DB_PARAM}
+#  main:
+#    banner-mode: off
+#  cloud:
+#    openfeign:
+#      config:
+#        agent-resolver-client:
+#          url: http://${AGENT_RESOLVER_CLIENT_HOST:127.0.0.1}:${AGENT_RESOLVER_CLIENT_PORT:8081}
+#          connectionTimeout: 5000
+#
+#feign:
+#  httpclient:
+#    disable-ssl-validation: true
+#  client:
+#    config:
+#      default:
+#        loggerLevel: FULL
 
 feign:
-  httpclient:
-    disable-ssl-validation: true
   client:
     config:
-      default:
-        loggerLevel: FULL
+      open-f1:
+        url: https://api.openf1.org/v1
 
 springdoc:
   api-docs:
@@ -100,10 +106,6 @@ logging:
     root: INFO
     web: DEBUG
     ru: info
-    org:
-      hibernate:
-        SQL: info
-    com:
-      zaxxer:
-        hikari:
-          HikariConfig: INFO
+    org.springframework.cloud.openfeign: DEBUG
+    org.hibernate.SQL: info
+    com.zaxxer.hikari.HikariConfig: INFO

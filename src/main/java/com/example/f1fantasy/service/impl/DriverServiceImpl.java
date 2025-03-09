@@ -31,13 +31,12 @@ public class DriverServiceImpl implements DriverService {
         Specification<Driver> specification = Specification
                 .where(DriverSpecification.hasDriverId(driverFilterDTO.driverId()))
                 .and(DriverSpecification.hasBroadcastName(driverFilterDTO.broadcastName()))
-                .and(DriverSpecification.hasCountryCode(driverFilterDTO.countryCode()))
                 .and(DriverSpecification.hasDriverNumber(driverFilterDTO.driverNumber()))
                 .and(DriverSpecification.hasFirstName(driverFilterDTO.firstName()))
-                .and(DriverSpecification.hasFullName(driverFilterDTO.fullName()))
                 .and(DriverSpecification.hasLastName(driverFilterDTO.lastName()))
-                .and(DriverSpecification.hasNameAcronym(driverFilterDTO.nameAcronym()))
-                .and(DriverSpecification.hasTeamName(driverFilterDTO.teamName()));
+                .and(DriverSpecification.hasFullName(driverFilterDTO.fullName()))
+                .and(DriverSpecification.hasCountryCode(driverFilterDTO.countryCode()))
+                .and(DriverSpecification.hasNameAcronym(driverFilterDTO.nameAcronym()));
 
         return driverRepository.findAll(specification).stream().map(driverMapper::toDTO).toList();
     }

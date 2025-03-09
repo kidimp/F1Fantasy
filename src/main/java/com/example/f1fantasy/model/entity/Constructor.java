@@ -30,7 +30,6 @@ import java.util.Set;
 public class Constructor {
 
     @Id
-    @Column(name = "constructor_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // Уникальный идентификатор конструктора
 
@@ -39,6 +38,9 @@ public class Constructor {
 
     @Column(name = "full_name", nullable = false)
     private String fullName; // Полное название команды
+
+    @Column(name = "name_acronym", nullable = false)
+    private String nameAcronym; // Аббревиатура названия команды
 
     @Column(name = "logo_url", nullable = false)
     private String logoUrl; // Ссылка на логотип команды
@@ -52,23 +54,8 @@ public class Constructor {
     @Column(name = "base", nullable = false)
     private String base; // Местоположение базы команды
 
-    @Column(name = "name_acronym", nullable = false)
-    private String nameAcronym; // Аббревиатура названия команды
-
     @Column(name = "team_colour", nullable = false)
     private String teamColour; // Цвет команды (в шестнадцатеричном формате)
-
-    @ManyToMany
-    @JoinTable(
-            name = "constructor_drivers",
-            joinColumns = @JoinColumn(name = "constructor_id"),
-            inverseJoinColumns = @JoinColumn(name = "driver_id")
-    )
-    @ToString.Exclude
-    private Set<Driver> drivers;
-
-    @Column(name = "cost")
-    private BigDecimal cost;
 
     @Override
     public final boolean equals(final Object o) {

@@ -62,13 +62,12 @@ public interface DriverControllerAPI {
     ResponseEntity<List<DriverDTO>> getDrivers(
             @Parameter(description = "Driver's ID") @RequestParam(required = false) Long driverId,
             @Parameter(description = "Driver's broadcast name") @RequestParam(required = false) String broadcastName,
-            @Parameter(description = "Driver's country code") @RequestParam(required = false) String countryCode,
-            @Parameter(description = "Driver's number") @RequestParam(required = false) Integer driverNumber,
             @Parameter(description = "Driver's first name") @RequestParam(required = false) String firstName,
-            @Parameter(description = "Driver's full name") @RequestParam(required = false) String fullName,
             @Parameter(description = "Driver's last name") @RequestParam(required = false) String lastName,
+            @Parameter(description = "Driver's full name") @RequestParam(required = false) String fullName,
             @Parameter(description = "Driver's name acronym") @RequestParam(required = false) String nameAcronym,
-            @Parameter(description = "Driver's team name") @RequestParam(required = false) String teamName
+            @Parameter(description = "Driver's country code") @RequestParam(required = false) String countryCode,
+            @Parameter(description = "Driver's number") @RequestParam(required = false) Integer driverNumber
     );
 
     /**
@@ -223,5 +222,5 @@ public interface DriverControllerAPI {
                     )
             )
     })
-    ResponseEntity<Void> deleteDriver(@Parameter(required = true) Long driverId);
+    ResponseEntity<Void> deleteDriverManually(@Parameter(required = true) Long driverId);
 }

@@ -31,20 +31,20 @@ public class DriverController implements DriverControllerAPI {
 
     @Override
     @GetMapping("")
-    public ResponseEntity<List<DriverDTO>> getDrivers(Long driverId, String broadcastName, String countryCode,
-                                                      Integer driverNumber, String firstName, String fullName,
-                                                      String lastName, String nameAcronym, String teamName) {
+    public ResponseEntity<List<DriverDTO>> getDrivers(Long driverId, String broadcastName, String firstName,
+                                                      String lastName, String fullName, String nameAcronym,
+                                                      String countryCode, Integer driverNumber) {
 
         DriverFilterDTO driverFilterDTO = DriverFilterDTO.builder()
                 .driverId(driverId)
                 .broadcastName(broadcastName)
+                .firstName(firstName)
+                .lastName(lastName)
+                .fullName(fullName)
+                .nameAcronym(nameAcronym)
                 .countryCode(countryCode)
                 .driverNumber(driverNumber)
-                .firstName(firstName)
-                .fullName(fullName)
-                .lastName(lastName)
-                .nameAcronym(nameAcronym)
-                .teamName(teamName).build();
+                .build();
 
         return ResponseEntity.ok(driverService.getDrivers(driverFilterDTO));
     }
@@ -81,7 +81,7 @@ public class DriverController implements DriverControllerAPI {
 
     @Override
     @DeleteMapping("/{driverId}")
-    public ResponseEntity<Void> deleteDriver(@PathVariable Long driverId) {
+    public ResponseEntity<Void> deleteDriverManually(@PathVariable Long driverId) {
         driverService.deleteDriver(driverId);
         return ResponseEntity.noContent().build();
     }
