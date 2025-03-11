@@ -4,20 +4,15 @@
 
 CREATE TABLE IF NOT EXISTS driver
 (
-    driver_id       bigserial       NOT NULL, -- Уникальный идентификатор водителя
-    broadcast_name  varchar(256),             -- Имя водителя в трансляции
-    country_code    varchar(3),               -- Код страны (3 символа)
-    driver_number   integer,                  -- Номер водителя
-    first_name      varchar(256),             -- Имя водителя
-    full_name       varchar(256),             -- Полное имя водителя
-    headshot_url    varchar(512),             -- URL на фото водителя
-    last_name       varchar(256),             -- Фамилия водителя
-    meeting_key     integer,                  -- Ключ встречи
-    name_acronym    varchar(3),               -- Аббревиатура имени водителя (3 символа)
-    session_key     integer,                  -- Ключ сессии
-    team_colour     varchar(7),               -- Цвет команды (в шестнадцатеричном формате)
-    team_name       varchar(256),             -- Название команды
-    cost            decimal(10, 2),           -- Стоимость водителя
+    driver_id       BIGSERIAL NOT NULL,     -- Уникальный идентификатор пилота
+    broadcast_name  VARCHAR(256) NOT NULL,  -- Имя пилота в трансляции
+    first_name      VARCHAR(256) NOT NULL,  -- Имя пилота
+    last_name       VARCHAR(256) NOT NULL,  -- Фамилия пилота
+    full_name       VARCHAR(256) NOT NULL,  -- Полное имя пилота
+    name_acronym    VARCHAR(3) NOT NULL,    -- Аббревиатура имени пилота (3 символа)
+    country_code    VARCHAR(3) NOT NULL,    -- Код страны (3 символа)
+    driver_number   INTEGER NOT NULL,       -- Номер пилота
+    headshot_url    VARCHAR(512) NOT NULL,  -- URL на фото пилота
 
     CONSTRAINT pk_driver PRIMARY KEY (driver_id)
 );

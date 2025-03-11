@@ -30,6 +30,7 @@ import java.util.Set;
 public class Constructor {
 
     @Id
+    @Column(name = "constructor_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // Уникальный идентификатор конструктора
 

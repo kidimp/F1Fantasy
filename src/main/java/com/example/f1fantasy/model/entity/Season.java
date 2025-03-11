@@ -25,6 +25,7 @@ import java.util.Objects;
 public class Season {
 
     @Id
+    @Column(name = "season_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

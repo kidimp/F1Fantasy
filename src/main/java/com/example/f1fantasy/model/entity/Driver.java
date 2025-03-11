@@ -28,6 +28,7 @@ import java.util.Objects;
 public class Driver {
 
     @Id
+    @Column(name = "driver_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

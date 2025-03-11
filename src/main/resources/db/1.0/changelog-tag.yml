@@ -7,8 +7,33 @@ databaseChangeLog:
             tag: 1.0
 
   - include:
+      file: 01-create-table-constructor.sql
+      relativeToChangelogFile: true
+
+  - include:
       file: 02-create-table-driver.sql
       relativeToChangelogFile: true
+
   - include:
-      file: 01-create-table-constructor.sql
+      file: 03-create-table-season.sql
+      relativeToChangelogFile: true
+
+  - include:
+      file: 04-create-table-circuit.sql
+      relativeToChangelogFile: true
+
+  - include:
+      file: 05-create-table-grand_prix.sql
+      relativeToChangelogFile: true
+
+  - include:
+      file: 06-create-table-constructor_season.sql
+      relativeToChangelogFile: true
+
+  - include:
+      file: 07-create-table-driver_constructor_season.sql
+      relativeToChangelogFile: true
+
+  - include:
+      file: 08-create-table-driver_grand_prix.sql
       relativeToChangelogFile: true
