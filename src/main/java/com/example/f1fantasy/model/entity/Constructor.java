@@ -1,5 +1,6 @@
 package com.example.f1fantasy.model.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -8,7 +9,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,6 +22,8 @@ import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -30,33 +37,57 @@ import java.util.Set;
 public class Constructor {
 
     @Id
-    @Column(name = "constructor_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Уникальный идентификатор конструктора
+    @Column(name = "constructor_id")
+    private Long id;
 
+    @NotNull
+    @Size(max = 255)
     @Column(name = "broadcast_name", nullable = false)
-    private String broadcastName; // Название команды в трансляциях
+    private String broadcastName;
 
+    @NotNull
+    @Size(max = 255)
     @Column(name = "full_name", nullable = false)
-    private String fullName; // Полное название команды
+    private String fullName;
 
-    @Column(name = "name_acronym", nullable = false)
-    private String nameAcronym; // Аббревиатура названия команды
+    @NotNull
+    @Size(min = 3, max = 3)
+    @Column(name = "name_acronym", nullable = false, length = 3)
+    private String nameAcronym;
 
+    @NotNull
     @Column(name = "logo_url", nullable = false)
-    private String logoUrl; // Ссылка на логотип команды
+    private String logoUrl;
 
-    @Column(name = "country_code", nullable = false)
-    private String countryCode; // Код страны
+    @NotNull
+    @Size(min = 3, max = 3)
+    @Column(name = "country_code", nullable = false, length = 3)
+    private String countryCode;
 
+    @NotNull
+    @Size(max = 255)
     @Column(name = "country_full_name", nullable = false)
-    private String countryFullName; // Полное название страны
+    private String countryFullName;
 
+    @NotNull
+    @Size(max = 255)
     @Column(name = "base", nullable = false)
-    private String base; // Местоположение базы команды
+    private String base;
 
-    @Column(name = "team_colour", nullable = false)
-    private String teamColour; // Цвет команды (в шестнадцатеричном формате)
+    @NotNull
+    @Size(min = 7, max = 7)
+    @Column(name = "team_colour", nullable = false, length = 7)
+    private String teamColour;
+
+    @ManyToMany(mappedBy = "constructors")
+    @ToString.Exclude
+    private List<Season> seasons = new ArrayList<>();
+
+    @ManyToMany(mappedBy = "constructors", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @OrderBy("lastName ASC")
+    @ToString.Exclude
+    private List<Driver> drivers = new ArrayList<>();
 
     @Override
     public final boolean equals(final Object o) {
