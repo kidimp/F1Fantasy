@@ -1,4 +1,4 @@
-package com.example.f1fantasy.model.dto;
+package com.example.f1fantasy.model.dto.filter;
 
 import lombok.Builder;
 
