@@ -3,9 +3,9 @@
 /*======================================*/
 
 CREATE TABLE IF NOT EXISTS grand_prix (
-    grand_prix_id         BIGINT PRIMARY KEY,
+    grand_prix_id         BIGSERIAL PRIMARY KEY,
     circuit_key           INTEGER NOT NULL,
-    season_id             BIGINT NOT NULL,
+    season_id             BIGSERIAL NOT NULL,
     date_start            TIMESTAMP NOT NULL,
     gmt_offset            VARCHAR(8) NOT NULL,
     meeting_key           INTEGER NOT NULL,

@@ -3,7 +3,7 @@
 /*======================================*/
 
 CREATE TABLE IF NOT EXISTS driver (
-    driver_id      BIGINT PRIMARY KEY,
+    driver_id      BIGSERIAL PRIMARY KEY,
     broadcast_name VARCHAR(255),
     first_name     VARCHAR(255) NOT NULL,
     last_name      VARCHAR(255) NOT NULL,

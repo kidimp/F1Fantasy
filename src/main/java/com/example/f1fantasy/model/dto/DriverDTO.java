@@ -3,6 +3,7 @@ package com.example.f1fantasy.model.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,12 +12,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Schema(description = "Represents the main information about a Formula 1 driver")
 public class DriverDTO {
-
-    @Schema(description = "Unique identifier of the driver", example = "1")
-    @JsonProperty("driver_id")
-    private Long id;
 
     @Schema(description = "Broadcast name of the driver", example = "Lewis Hamilton")
     @JsonProperty("broadcast_name")
@@ -49,6 +47,4 @@ public class DriverDTO {
     @Schema(description = "URL to the driver's headshot image", example = "https://example.com/headshot.jpg")
     @JsonProperty("headshot_url")
     private String headshotUrl;
-
-    private String currentTeam;
 }
