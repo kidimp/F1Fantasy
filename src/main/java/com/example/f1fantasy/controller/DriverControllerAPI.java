@@ -37,7 +37,6 @@ public interface DriverControllerAPI {
      * @param fullName - the driver's full name (optional)
      * @param lastName - the driver's last name (optional)
      * @param nameAcronym - the driver's name acronym (optional)
-     * @param teamName - the driver's team name (optional)
      * @return a list of drivers matching the query parameters
      */
     @Operation(summary = "Get information about a driver or drivers based on query parameters")
@@ -73,7 +72,7 @@ public interface DriverControllerAPI {
     /**
      * Create a new driver manually.
      *
-     * @param driverDTO - the driver's data
+     * @param driverDTO the driver's data
      * @return the created driver
      */
     @Operation(summary = "Create a new driver manually")
@@ -98,10 +97,10 @@ public interface DriverControllerAPI {
     ResponseEntity<DriverDTO> createDriverManually(@Parameter(required = true) DriverDTO driverDTO);
 
     /**
-     * Create a driver via the F1 API.
+     * Create drivers list via the F1 API.
      *
-     * @param externalDriverData - the driver's data obtained via the F1 API
-     * @return the created driver
+     * @param year the year of season start
+     * @return the created list of drivers
      */
     @Operation(summary = "Create a driver via the F1 API")
     @ApiResponses(value = {
@@ -122,7 +121,7 @@ public interface DriverControllerAPI {
                     )
             )
     })
-    ResponseEntity<DriverDTO> createDriverViaF1API(@Parameter(required = true) ExternalDriverDataDTO externalDriverData);
+    ResponseEntity<List<DriverDTO>> createDriversViaF1API(@Parameter(required = true) Integer year);
 
     /**
      * Update a driver's information manually.
@@ -210,7 +209,7 @@ public interface DriverControllerAPI {
                     description = "Driver successfully deleted",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = Void.class)
+                            schema = @Schema()
                     )
             ),
             @ApiResponse(

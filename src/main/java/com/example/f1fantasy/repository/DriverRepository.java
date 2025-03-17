@@ -10,4 +10,7 @@ public interface DriverRepository extends JpaRepository<Driver, Long>, JpaSpecif
 
     // Метод для проверки существования пилота по комбинации полей
     boolean existsByBroadcastNameAndFirstNameAndLastNameAndFullName(String broadcastName, String firstName, String lastName, String fullName);
+
+    // Метод для проверки существования пилота по комбинации полей
+    boolean existsByBroadcastNameAndFullName(String broadcastName, String fullName);
 }

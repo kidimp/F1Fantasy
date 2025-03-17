@@ -2,6 +2,10 @@ package com.example.f1fantasy.model.dto.external;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * DTO for Driver entity.
@@ -9,6 +13,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * The data for this DTO is fetched from the F1 API.
  */
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "Represents the main information about a Formula 1 driver")
 public class ExternalDriverDataDTO {
 
     @Schema(description = "Broadcast name of the driver", example = "Lewis Hamilton")

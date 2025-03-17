@@ -27,12 +27,11 @@ public interface DriverService {
     DriverDTO createDriver(DriverDTO driverDTO);
 
     /**
-     * Create a driver via the F1 API.
-     *
-     * @param externalDriverData - the driver's data obtained via the F1 API
-     * @return the created driver
+     * Create drivers list via the F1 API.
+     * @param year the year of season start
+     * @return the created list of drivers
      */
-    DriverDTO createDriverViaF1API(ExternalDriverDataDTO externalDriverData);
+    List<DriverDTO> createDriversViaF1API(Integer year);
 
     /**
      * Update a driver's information manually.

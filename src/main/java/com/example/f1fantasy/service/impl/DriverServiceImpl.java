@@ -1,10 +1,13 @@
 package com.example.f1fantasy.service.impl;
 
+import com.example.f1fantasy.client.OpenF1Client;
 import com.example.f1fantasy.exception.DataNotExistsException;
+import com.example.f1fantasy.exception.DataNotFoundException;
 import com.example.f1fantasy.exception.DriverAlreadyExistsException;
 import com.example.f1fantasy.mapper.DriverMapper;
 import com.example.f1fantasy.model.dto.DriverDTO;
 import com.example.f1fantasy.model.dto.external.ExternalDriverDataDTO;
+import com.example.f1fantasy.model.dto.external.ExternalMeetingDataDTO;
 import com.example.f1fantasy.model.dto.filter.DriverFilterDTO;
 import com.example.f1fantasy.model.entity.Driver;
 import com.example.f1fantasy.repository.DriverRepository;
@@ -17,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -26,6 +31,7 @@ public class DriverServiceImpl implements DriverService {
 
     private final DriverRepository driverRepository;
     private final DriverMapper driverMapper;
+    private final OpenF1Client openF1Client;
 
     @Override
     @Transactional(readOnly = true)
@@ -65,8 +71,47 @@ public class DriverServiceImpl implements DriverService {
     }
 
     @Override
-    public DriverDTO createDriverViaF1API(ExternalDriverDataDTO externalDriverData) {
-        return null;
+    public List<DriverDTO> createDriversViaF1API(Integer year) {
+        // Получаем список всех гонок за конкретный год
+        List<ExternalMeetingDataDTO> meetings = openF1Client.getMeetings(year);
+        if (meetings.isEmpty()) {
+            throw new DataNotFoundException("No meetings found for " + year + ".");
+        }
+
+        // Берем meeting_key последнего события
+        int latestMeetingKey = meetings.get(meetings.size() - 1).getMeetingKey();
+
+        // Получаем список гонщиков по этому meeting_key. A meeting refers to a Grand Prix or testing weekend
+        // and usually includes multiple sessions (practice, qualifying, race, ...).
+        List<ExternalDriverDataDTO> drivers = openF1Client.getDriversByMeetingKey(latestMeetingKey);
+
+        // Убираем дубликаты по full_name, начиная с конца списка
+        // (т.к. в конце списка будут пилоты, которые учавствовали в гонке)
+        Map<String, ExternalDriverDataDTO> uniqueDrivers = new LinkedHashMap<>();
+        for (int i = drivers.size() - 1; i >= 0; i--) {
+            ExternalDriverDataDTO driver = drivers.get(i);
+            uniqueDrivers.putIfAbsent(driver.getFullName(), driver);
+        }
+
+        // Маппим в DriverDTO
+        List<DriverDTO> driverDTOs = driverMapper.toDriverDTOList(new ArrayList<>(uniqueDrivers.values()));
+
+        // Проверяем поля на null и заменяем на n/a если пустые
+        driverDTOs.forEach(this::handleNullFields);
+
+        List<Driver> driverEntities = driverDTOs.stream()                   // Преобразуем список driverDTOs в stream
+                .filter(driverDTO -> !driverRepository.existsByBroadcastNameAndFullName(
+                        driverDTO.getBroadcastName(),                       // Отфильтровываем дубликаты — если такой
+                        driverDTO.getFullName()                             // гонщик уже есть в БД, то пропускаем его
+                ))
+                .map(driverMapper::toEntity)                                // Маппим оставшихся гонщиков в Driver
+                .toList();                                                  // Если список не пуст, сохраняем в БД
+
+        if (!driverEntities.isEmpty()) {
+            driverRepository.saveAll(driverEntities);
+        }
+
+        return driverDTOs;
     }
 
     @Override
@@ -91,6 +136,7 @@ public class DriverServiceImpl implements DriverService {
     @Override
     public void deleteDriver(Long driverId) {
         // TODO сделать ответ, чтобы понимать - успешное удаление или нет
+        // TODO сделать удаление не по id, по другому полю
         Driver existingDriver = driverRepository.findById(driverId)
                 .orElseThrow(() -> new DataNotExistsException("Driver with id " + driverId + " not found"));
 
@@ -129,6 +175,33 @@ public class DriverServiceImpl implements DriverService {
         if (!missingFields.isEmpty()) {
             throw new IllegalArgumentException("The following fields are required and cannot be null: "
                     + String.join(", ", missingFields));
+        }
+    }
+
+    private void handleNullFields(DriverDTO driverDTO) {
+        if (driverDTO.getFirstName() == null) {
+            driverDTO.setFirstName("n/a");
+        }
+        if (driverDTO.getLastName() == null) {
+            driverDTO.setLastName("n/a");
+        }
+        if (driverDTO.getDriverNumber() == null) {
+            driverDTO.setDriverNumber(0);
+        }
+        if (driverDTO.getBroadcastName() == null) {
+            driverDTO.setBroadcastName("n/a");
+        }
+        if (driverDTO.getFullName() == null) {
+            driverDTO.setFullName("n/a");
+        }
+        if (driverDTO.getNameAcronym() == null) {
+            driverDTO.setNameAcronym("n/a");
+        }
+        if (driverDTO.getCountryCode() == null) {
+            driverDTO.setCountryCode("n/a");
+        }
+        if (driverDTO.getHeadshotUrl() == null) {
+            driverDTO.setHeadshotUrl("n/a");
         }
     }
 }

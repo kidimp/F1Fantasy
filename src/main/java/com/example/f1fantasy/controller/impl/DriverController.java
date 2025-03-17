@@ -57,10 +57,10 @@ public class DriverController implements DriverControllerAPI {
     }
 
     @Override
-    @PostMapping("/via-f1-api")
-    public ResponseEntity<DriverDTO> createDriverViaF1API(@Valid @RequestBody ExternalDriverDataDTO externalDriverData) {
-        DriverDTO createdDriver = driverService.createDriverViaF1API(externalDriverData);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdDriver);
+    @PostMapping("/list/via-f1-api")
+    public ResponseEntity<List<DriverDTO>> createDriversViaF1API(Integer year) {
+        List<DriverDTO> createdDrivers = driverService.createDriversViaF1API(year);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdDrivers);
     }
 
     @Override
