@@ -14,7 +14,8 @@ import java.time.OffsetDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Represents the main information about a Formula 1 meeting")
+@Schema(description = "Represents the main information about a Formula 1 meeting. A meeting refers to a Grand Prix " +
+        "or testing weekend and usually includes multiple sessions (practice, qualifying, race, ...).")
 public class ExternalMeetingDataDTO {
 
     @Schema(description = "The unique identifier for the circuit where the event takes place.", example = "61")

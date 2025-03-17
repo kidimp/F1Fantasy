@@ -8,8 +8,10 @@ import com.example.f1fantasy.mapper.DriverMapper;
 import com.example.f1fantasy.model.dto.DriverDTO;
 import com.example.f1fantasy.model.dto.external.ExternalDriverDataDTO;
 import com.example.f1fantasy.model.dto.external.ExternalMeetingDataDTO;
+import com.example.f1fantasy.model.dto.external.ExternalSessionDataDTO;
 import com.example.f1fantasy.model.dto.filter.DriverFilterDTO;
 import com.example.f1fantasy.model.entity.Driver;
+import com.example.f1fantasy.model.enums.SessionTypeEnum;
 import com.example.f1fantasy.repository.DriverRepository;
 import com.example.f1fantasy.repository.specification.DriverSpecification;
 import com.example.f1fantasy.service.DriverService;
@@ -23,6 +25,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -73,7 +76,7 @@ public class DriverServiceImpl implements DriverService {
     @Override
     public List<DriverDTO> createDriversViaF1API(Integer year) {
         // Получаем список всех гонок за конкретный год
-        List<ExternalMeetingDataDTO> meetings = openF1Client.getMeetings(year);
+        List<ExternalMeetingDataDTO> meetings = openF1Client.getMeetingsByYear(year);
         if (meetings.isEmpty()) {
             throw new DataNotFoundException("No meetings found for " + year + ".");
         }
@@ -81,12 +84,24 @@ public class DriverServiceImpl implements DriverService {
         // Берем meeting_key последнего события
         int latestMeetingKey = meetings.get(meetings.size() - 1).getMeetingKey();
 
-        // Получаем список гонщиков по этому meeting_key. A meeting refers to a Grand Prix or testing weekend
-        // and usually includes multiple sessions (practice, qualifying, race, ...).
-        List<ExternalDriverDataDTO> drivers = openF1Client.getDriversByMeetingKey(latestMeetingKey);
+        // Получаем список сессий по этому meeting_key
+        List<ExternalSessionDataDTO> sessions = openF1Client.getSessionsByMeetingKey(latestMeetingKey);
+
+        // Ищем сессию с session_type == "Race"
+        Optional<Integer> raceSessionKey = sessions.stream()
+                .filter(session -> SessionTypeEnum.RACE.getValue().equalsIgnoreCase(session.getSessionType()))
+                .map(ExternalSessionDataDTO::getSessionKey)
+                .findFirst();
+
+        if (raceSessionKey.isEmpty()) {
+            throw new DataNotFoundException("No race session found for meeting_key " + latestMeetingKey);
+        }
+
+        // Получаем список гонщиков по найденному session_key
+        List<ExternalDriverDataDTO> drivers = openF1Client.getDriversBySessionKey(raceSessionKey.get());
 
         // Убираем дубликаты по full_name, начиная с конца списка
-        // (т.к. в конце списка будут пилоты, которые учавствовали в гонке)
+        // (т.к. в конце списка будут пилоты, которые участвовали в гонке)
         Map<String, ExternalDriverDataDTO> uniqueDrivers = new LinkedHashMap<>();
         for (int i = drivers.size() - 1; i >= 0; i--) {
             ExternalDriverDataDTO driver = drivers.get(i);
@@ -116,7 +131,7 @@ public class DriverServiceImpl implements DriverService {
 
     @Override
     public DriverDTO updateDriver(Long driverId, DriverDTO driverDTO) {
-        //TODO Сделать обновление не по id, по другому полю
+        // TODO Сделать обновление не по id, по другому полю
         Driver existingDriver = driverRepository.findById(driverId)
                 .orElseThrow(() -> new DataNotExistsException("Driver with id " + driverId + " not found"));
 
