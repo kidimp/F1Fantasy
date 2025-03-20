@@ -1,7 +1,7 @@
 package com.example.f1fantasy.controller;
 
 import com.example.f1fantasy.model.dto.DriverDTO;
-import com.example.f1fantasy.model.dto.external.ExternalDriverDataDTO;
+import com.example.f1fantasy.model.dto.util.DriverCreationResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -9,8 +9,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -21,25 +24,26 @@ import java.util.List;
  */
 @Tag(name = "Driver Controller", description = "Controller for managing drivers")
 public interface DriverControllerAPI {
-
     /**
      * Get information about a driver or drivers based on the provided query parameters.
-     * If no parameters are provided, an empty response will be returned.
      *
-     * If multiple parameters are provided, it will only return drivers who match all the provided parameters.
-     * If a parameter like teamName is provided, multiple drivers from that team will be returned.
-     *
-     * @param driverId - the driver's ID (optional)
+     * @param driverId      - the driver's ID (optional)
      * @param broadcastName - the driver's broadcast name (optional)
-     * @param countryCode - the driver's country code (optional)
-     * @param driverNumber - the driver's number (optional)
-     * @param firstName - the driver's first name (optional)
-     * @param fullName - the driver's full name (optional)
-     * @param lastName - the driver's last name (optional)
-     * @param nameAcronym - the driver's name acronym (optional)
+     * @param countryCode   - the driver's country code (optional)
+     * @param driverNumber  - the driver's number (optional)
+     * @param firstName     - the driver's first name (optional)
+     * @param fullName      - the driver's full name (optional)
+     * @param lastName      - the driver's last name (optional)
+     * @param nameAcronym   - the driver's name acronym (optional)
      * @return a list of drivers matching the query parameters
      */
-    @Operation(summary = "Get information about a driver or drivers based on query parameters")
+    @Operation(summary = "Get information about a driver or drivers based on query parameters",
+            description = """
+                    If no parameters are provided, an empty response will be returned.
+                    If multiple parameters are provided, it will only return drivers
+                    who match all the provided parameters. If a parameter like teamName is provided,
+                    multiple drivers from that team will be returned.
+                    """)
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -100,9 +104,20 @@ public interface DriverControllerAPI {
      * Create drivers list via the F1 API.
      *
      * @param year the year of season start
-     * @return the created list of drivers
+     * @return DriverCreationResponseDTO - list of created drivers and list of conflicts
      */
-    @Operation(summary = "Create a driver via the F1 API")
+    @Operation(
+            summary = "Create a driver via the F1 API",
+            description = """
+                    Метод получает список гонщиков из F1 API за определённый сезон,
+                    убирает дубликаты, проверяет на существование в базе,
+                    сохраняет новых пилотов и обрабатывает возможные конфликты.
+                            
+                    Возвращается объект DriverCreationResponseDTO, в котором:
+                    - `savedDrivers` — успешно добавленные гонщики.
+                    - `conflicts` — гонщики, которые не были добавлены из-за конфликта.
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
@@ -121,14 +136,13 @@ public interface DriverControllerAPI {
                     )
             )
     })
-    ResponseEntity<List<DriverDTO>> createDriversViaF1API(@Parameter(required = true) Integer year);
+    ResponseEntity<DriverCreationResponseDTO> createDriversViaF1API(@Parameter(required = true) Integer year);
 
     /**
-     * Update a driver's information manually.
      *
-     * @param driverId  - the driver's ID
-     * @param driverDTO - the updated driver's data
-     * @return the updated driver data
+     * @param fullName full name
+     * @param driverDTO the updated driver's data
+     * @return the updated driver's data
      */
     @Operation(summary = "Update a driver's information manually")
     @ApiResponses(value = {
@@ -157,15 +171,14 @@ public interface DriverControllerAPI {
                     )
             )
     })
-    ResponseEntity<DriverDTO> updateDriverManually(@Parameter(required = true) Long driverId,
-                                                   @Parameter(required = true) DriverDTO driverDTO);
+    ResponseEntity<DriverDTO> updateDriverManually(@Parameter(required = true) @PathVariable String fullName,
+                                                   @Valid @RequestBody DriverDTO driverDTO);
 
     /**
-     * Update a driver's information via the F1 API.
+     * Update a drivers information via the F1 API.
      *
-     * @param driverId           - the driver's ID
-     * @param externalDriverData - the updated driver's data obtained via the F1 API
-     * @return the updated driver data
+     * @param year the year of season start
+     * @return the updated drivers data
      */
     @Operation(summary = "Update a driver's information via the F1 API")
     @ApiResponses(value = {
@@ -194,13 +207,13 @@ public interface DriverControllerAPI {
                     )
             )
     })
-    ResponseEntity<DriverDTO> updateDriverViaF1API(@Parameter(required = true) Long driverId,
-                                                   @Parameter(required = true) ExternalDriverDataDTO externalDriverData);
+    ResponseEntity<List<DriverDTO>> updateDriversViaF1API(@Parameter(required = true) Integer year);
 
     /**
      * Delete a driver.
      *
-     * @param driverId - the driver's ID
+     * @param fullName - the driver's full name
+     * @return 200 or 404
      */
     @Operation(summary = "Delete a driver")
     @ApiResponses(value = {
@@ -221,5 +234,5 @@ public interface DriverControllerAPI {
                     )
             )
     })
-    ResponseEntity<Void> deleteDriverManually(@Parameter(required = true) Long driverId);
+    ResponseEntity<String> deleteDriverManually(@Parameter(required = true) String fullName);
 }

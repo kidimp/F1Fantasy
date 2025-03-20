@@ -1,15 +1,17 @@
 package com.example.f1fantasy.service.impl;
 
 import com.example.f1fantasy.client.OpenF1Client;
-import com.example.f1fantasy.exception.DataNotExistsException;
 import com.example.f1fantasy.exception.DataNotFoundException;
 import com.example.f1fantasy.exception.DriverAlreadyExistsException;
+import com.example.f1fantasy.exception.ExternalApiException;
 import com.example.f1fantasy.mapper.DriverMapper;
 import com.example.f1fantasy.model.dto.DriverDTO;
 import com.example.f1fantasy.model.dto.external.ExternalDriverDataDTO;
 import com.example.f1fantasy.model.dto.external.ExternalMeetingDataDTO;
 import com.example.f1fantasy.model.dto.external.ExternalSessionDataDTO;
 import com.example.f1fantasy.model.dto.filter.DriverFilterDTO;
+import com.example.f1fantasy.model.dto.util.ConflictInfoDTO;
+import com.example.f1fantasy.model.dto.util.DriverCreationResponseDTO;
 import com.example.f1fantasy.model.entity.Driver;
 import com.example.f1fantasy.model.enums.SessionTypeEnum;
 import com.example.f1fantasy.repository.DriverRepository;
@@ -18,6 +20,7 @@ import com.example.f1fantasy.service.DriverService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -58,12 +62,24 @@ public class DriverServiceImpl implements DriverService {
 
         validateDriverDTO(driverDTO);
 
-        if (driverRepository.existsByBroadcastNameAndFirstNameAndLastNameAndFullName(
-                driverDTO.getBroadcastName(),
-                driverDTO.getFirstName(),
-                driverDTO.getLastName(),
-                driverDTO.getFullName())) {
-            throw new DriverAlreadyExistsException("A driver with the same name already exists: " + driverDTO.getFullName());
+        List<String> conflictReasons = new ArrayList<>();
+
+        if (driverRepository.existsByFullName(driverDTO.getFullName())) {
+            conflictReasons.add("A driver with the same name already exists: " + driverDTO.getFullName());
+        }
+
+        if (driverRepository.existsByDriverNumber(driverDTO.getDriverNumber())) {
+            conflictReasons.add("A driver with the same driver number already exists: " + driverDTO.getDriverNumber());
+        }
+
+        if (driverRepository.existsByNameAcronym(driverDTO.getNameAcronym())) {
+            conflictReasons.add("A driver with the same name acronym already exists: " + driverDTO.getNameAcronym());
+        }
+
+        // Если есть причины, выбрасываем исключение
+        if (!conflictReasons.isEmpty()) {
+            String errorMessage = String.join("; ", conflictReasons);
+            throw new DriverAlreadyExistsException(errorMessage);
         }
 
         Driver driverEntity = driverMapper.toEntity(driverDTO);
@@ -74,18 +90,187 @@ public class DriverServiceImpl implements DriverService {
     }
 
     @Override
-    public List<DriverDTO> createDriversViaF1API(Integer year) {
-        // Получаем список всех гонок за конкретный год
-        List<ExternalMeetingDataDTO> meetings = openF1Client.getMeetingsByYear(year);
+    public DriverCreationResponseDTO createDriversViaF1API(Integer year) {
+        // Получаем гонщиков из F1 API и убираем дубликаты
+        List<ExternalDriverDataDTO> uniqueDrivers = fetchAndFilterDriversByYear(year);
+
+        List<DriverDTO> driverDTOs = driverMapper.toDriverDTOListFromExternal(uniqueDrivers);
+
+        // Проверяем поля на null и заменяем на n/a если пустые
+        driverDTOs.forEach(this::handleNullFields);
+
+        List<ConflictInfoDTO> conflicts = new ArrayList<>();
+        List<Driver> driverEntities = new ArrayList<>();
+
+        // Получаем список всех водителей, которые могут иметь тот же driverNumber или nameAcronym
+        List<Driver> allDrivers = driverRepository.findAllByDriverNumberInAndNameAcronymIn(
+                driverDTOs.stream().map(DriverDTO::getDriverNumber).toList(),
+                driverDTOs.stream().map(DriverDTO::getNameAcronym).toList()
+        );
+
+        // Преобразуем список allDrivers в Map для быстрого поиска
+        Map<Integer, Driver> driverNumberMap = allDrivers.stream()
+                .collect(Collectors.toMap(Driver::getDriverNumber, driver -> driver));
+        Map<String, Driver> nameAcronymMap = allDrivers.stream()
+                .collect(Collectors.toMap(Driver::getNameAcronym, driver -> driver));
+
+        // Обрабатываем каждый DriverDTO
+        for (DriverDTO driverDTO : driverDTOs) {
+            Optional<Driver> existingDriverByNumber = Optional.ofNullable(driverNumberMap.get(driverDTO.getDriverNumber()));
+            Optional<Driver> existingDriverByAcronym = Optional.ofNullable(nameAcronymMap.get(driverDTO.getNameAcronym()));
+
+            // Если найден дубликат driver_number с другим full_name, добавляем в список конфликтов
+            if (existingDriverByNumber.isPresent() && !existingDriverByNumber.get().getFullName().equals(driverDTO.getFullName())) {
+                conflicts.add(
+                        ConflictInfoDTO.builder()
+                                .fullName(driverDTO.getFullName())
+                                .nameAcronym(driverDTO.getNameAcronym())
+                                .driverNumber(driverDTO.getDriverNumber())
+                                .conflictReason("Duplicate driver number")
+                                .build()
+                );
+            }
+
+            // Если найден дубликат name_acronym с другим full_name, добавляем в список конфликтов
+            if (existingDriverByAcronym.isPresent() && !existingDriverByAcronym.get().getFullName().equals(driverDTO.getFullName())) {
+                conflicts.add(
+                        ConflictInfoDTO.builder()
+                                .fullName(driverDTO.getFullName())
+                                .nameAcronym(driverDTO.getNameAcronym())
+                                .driverNumber(driverDTO.getDriverNumber())
+                                .conflictReason("Duplicate name acronym")
+                                .build()
+                );
+            }
+
+            // Если нет конфликта по driver_number и name_acronym, маппим и добавляем в список для сохранения
+            if (existingDriverByNumber.isEmpty() && existingDriverByAcronym.isEmpty()) {
+                driverEntities.add(driverMapper.toEntity(driverDTO));
+            }
+        }
+
+        if (!driverEntities.isEmpty()) {
+            driverRepository.saveAll(driverEntities);
+        }
+
+        return new DriverCreationResponseDTO(driverMapper.toDriverDTOListFromEntities(driverEntities), conflicts);
+    }
+
+    @Override
+    public DriverDTO updateDriver(String fullName, DriverDTO driverDTO) {
+
+        Driver existingDriver = driverRepository.findByFullName(fullName)
+                .orElseThrow(() -> new DataNotFoundException("Driver with fullName " + fullName + " not found"));
+
+        List<String> conflictReasons = new ArrayList<>();
+
+        // Проверяем, не занят ли новый driverNumber другим гонщиком
+        if (driverDTO.getDriverNumber() != null &&
+                driverRepository.existsByDriverNumberAndFullNameNot(driverDTO.getDriverNumber(), fullName)) {
+            conflictReasons.add("A driver with the same driver number already exists: " + driverDTO.getDriverNumber());
+        }
+
+        // Проверяем, не занят ли новый nameAcronym другим гонщиком
+        if (driverDTO.getNameAcronym() != null &&
+                driverRepository.existsByNameAcronymAndFullNameNot(driverDTO.getNameAcronym(), fullName)) {
+            conflictReasons.add("A driver with the same name acronym already exists: " + driverDTO.getNameAcronym());
+        }
+
+        // Если есть причины, выбрасываем исключение
+        if (!conflictReasons.isEmpty()) {
+            String errorMessage = String.join("; ", conflictReasons);
+            throw new DriverAlreadyExistsException(errorMessage);
+        }
+
+        driverMapper.updateEntityFromDTO(driverDTO, existingDriver);
+
+        Driver updatedDriver = driverRepository.save(existingDriver);
+
+        return driverMapper.toDTO(updatedDriver);
+    }
+
+    @Override
+    @Transactional
+    public List<DriverDTO> updateDriversViaF1API(Integer year) {
+        // Получаем гонщиков из F1 API и убираем дубликаты
+        List<ExternalDriverDataDTO> uniqueDrivers = fetchAndFilterDriversByYear(year);
+
+        // Получаем список текущих записей пилотов из БД по полному имени
+        List<Driver> existingDrivers = driverRepository.findAllByFullNameIn(
+                uniqueDrivers.stream().map(ExternalDriverDataDTO::getFullName).toList()
+        );
+
+        // Создаем мапу <fullName, Driver> для удобного поиска существующих записей
+        Map<String, Driver> existingDriverMap = existingDrivers.stream()
+                .collect(Collectors.toMap(Driver::getFullName, driver -> driver));
+
+        List<Driver> updatedDrivers = new ArrayList<>();
+
+        // Обновляем данные для каждого уникального гонщика
+        for (ExternalDriverDataDTO externalDriver : uniqueDrivers) {
+            Driver existingDriver = existingDriverMap.get(externalDriver.getFullName());
+
+            if (existingDriver != null) {
+                // Обновляем данные сущности с проверкой на изменения
+                boolean isUpdated = updateDriverDataIfChanged(existingDriver, externalDriver);
+
+                // Если ни одно поле не изменилось, пропускаем обновление
+                if (!isUpdated) {
+                    continue;
+                }
+
+                // Применяем обработку null значений
+                handleNullFields(existingDriver);
+
+                // Добавляем обновленного гонщика в список
+                updatedDrivers.add(existingDriver);
+            }
+        }
+
+        // Сохраняем обновленные записи в БД
+        if (!updatedDrivers.isEmpty()) {
+            driverRepository.saveAll(updatedDrivers);
+        }
+
+        // Возвращаем обновленные записи в виде DTO
+        return driverMapper.toDriverDTOListFromEntities(updatedDrivers);
+    }
+
+    @Override
+    @Transactional
+    public void deleteDriver(String fullName) {
+        Driver existingDriver = driverRepository.findByFullName(fullName)
+                .orElseThrow(() -> new DataNotFoundException("Driver " + fullName + " not found"));
+
+        driverRepository.delete(existingDriver);
+
+        ResponseEntity.ok("Driver " + fullName + " deleted successfully");
+    }
+
+    private List<ExternalDriverDataDTO> fetchAndFilterDriversByYear(int year) {
+
+        List<ExternalMeetingDataDTO> meetings;
+        try {
+            // Получаем список всех гонок за конкретный год
+            meetings = openF1Client.getMeetingsByYear(year);
+        } catch (ExternalApiException e) {
+            throw new ExternalApiException("External API is unavailable. Endpoint https://api.openf1.org/v1/meetings");
+        }
+
         if (meetings.isEmpty()) {
             throw new DataNotFoundException("No meetings found for " + year + ".");
         }
 
-        // Берем meeting_key последнего события
+        // Берем meeting_key последнего события (последний состоявшийся гранд-при)
         int latestMeetingKey = meetings.get(meetings.size() - 1).getMeetingKey();
 
-        // Получаем список сессий по этому meeting_key
-        List<ExternalSessionDataDTO> sessions = openF1Client.getSessionsByMeetingKey(latestMeetingKey);
+        List<ExternalSessionDataDTO> sessions;
+        try {
+            // Получаем список сессий по этому meeting_key
+            sessions = openF1Client.getSessionsByMeetingKey(latestMeetingKey);
+        } catch (ExternalApiException e) {
+            throw new ExternalApiException("External API is unavailable. Endpoint https://api.openf1.org/v1/sessions");
+        }
 
         // Ищем сессию с session_type == "Race"
         Optional<Integer> raceSessionKey = sessions.stream()
@@ -97,65 +282,72 @@ public class DriverServiceImpl implements DriverService {
             throw new DataNotFoundException("No race session found for meeting_key " + latestMeetingKey);
         }
 
-        // Получаем список гонщиков по найденному session_key
-        List<ExternalDriverDataDTO> drivers = openF1Client.getDriversBySessionKey(raceSessionKey.get());
+        List<ExternalDriverDataDTO> drivers;
+        try {
+            // Получаем список гонщиков по найденному session_key
+            drivers = openF1Client.getDriversBySessionKey(raceSessionKey.get());
+        } catch (ExternalApiException e) {
+            throw new ExternalApiException("External API is unavailable. Endpoint https://api.openf1.org/v1/drivers");
+        }
 
         // Убираем дубликаты по full_name, начиная с конца списка
-        // (т.к. в конце списка будут пилоты, которые участвовали в гонке)
         Map<String, ExternalDriverDataDTO> uniqueDrivers = new LinkedHashMap<>();
         for (int i = drivers.size() - 1; i >= 0; i--) {
             ExternalDriverDataDTO driver = drivers.get(i);
             uniqueDrivers.putIfAbsent(driver.getFullName(), driver);
         }
 
-        // Маппим в DriverDTO
-        List<DriverDTO> driverDTOs = driverMapper.toDriverDTOList(new ArrayList<>(uniqueDrivers.values()));
+        return new ArrayList<>(uniqueDrivers.values());
+    }
 
-        // Проверяем поля на null и заменяем на n/a если пустые
-        driverDTOs.forEach(this::handleNullFields);
+    private boolean updateDriverDataIfChanged(Driver existingDriver, ExternalDriverDataDTO externalDriver) {
+        boolean isUpdated = false;
 
-        List<Driver> driverEntities = driverDTOs.stream()                   // Преобразуем список driverDTOs в stream
-                .filter(driverDTO -> !driverRepository.existsByBroadcastNameAndFullName(
-                        driverDTO.getBroadcastName(),                       // Отфильтровываем дубликаты — если такой
-                        driverDTO.getFullName()                             // гонщик уже есть в БД, то пропускаем его
-                ))
-                .map(driverMapper::toEntity)                                // Маппим оставшихся гонщиков в Driver
-                .toList();                                                  // Если список не пуст, сохраняем в БД
-
-        if (!driverEntities.isEmpty()) {
-            driverRepository.saveAll(driverEntities);
+        // Обновляем поля, если они изменились и не равны "n/a"
+        if (shouldUpdateField(existingDriver.getFirstName(), externalDriver.getFirstName())) {
+            existingDriver.setFirstName(externalDriver.getFirstName());
+            isUpdated = true;
+        }
+        if (shouldUpdateField(existingDriver.getLastName(), externalDriver.getLastName())) {
+            existingDriver.setLastName(externalDriver.getLastName());
+            isUpdated = true;
+        }
+        if (shouldUpdateField(existingDriver.getDriverNumber(), externalDriver.getDriverNumber())) {
+            existingDriver.setDriverNumber(externalDriver.getDriverNumber());
+            isUpdated = true;
+        }
+        if (shouldUpdateField(existingDriver.getBroadcastName(), externalDriver.getBroadcastName())) {
+            existingDriver.setBroadcastName(externalDriver.getBroadcastName());
+            isUpdated = true;
+        }
+        if (shouldUpdateField(existingDriver.getFullName(), externalDriver.getFullName())) {
+            existingDriver.setFullName(externalDriver.getFullName());
+            isUpdated = true;
+        }
+        if (shouldUpdateField(existingDriver.getNameAcronym(), externalDriver.getNameAcronym())) {
+            existingDriver.setNameAcronym(externalDriver.getNameAcronym());
+            isUpdated = true;
+        }
+        if (shouldUpdateField(existingDriver.getCountryCode(), externalDriver.getCountryCode())) {
+            existingDriver.setCountryCode(externalDriver.getCountryCode());
+            isUpdated = true;
+        }
+        if (shouldUpdateField(existingDriver.getHeadshotUrl(), externalDriver.getHeadshotUrl())) {
+            existingDriver.setHeadshotUrl(externalDriver.getHeadshotUrl());
+            isUpdated = true;
         }
 
-        return driverDTOs;
+        return isUpdated;
     }
 
-    @Override
-    public DriverDTO updateDriver(Long driverId, DriverDTO driverDTO) {
-        // TODO Сделать обновление не по id, по другому полю
-        Driver existingDriver = driverRepository.findById(driverId)
-                .orElseThrow(() -> new DataNotExistsException("Driver with id " + driverId + " not found"));
-
-        // Используем маппер для обновления только переданных полей
-        driverMapper.updateEntityFromDTO(driverDTO, existingDriver);
-
-        Driver updatedDriver = driverRepository.save(existingDriver);
-
-        return driverMapper.toDTO(updatedDriver);
+    private boolean shouldUpdateField(String existingValue, String newValue) {
+        // Если значение из внешнего источника равно null или пустое и в базе хранится "n/a", обновлять не нужно
+        return newValue != null && !newValue.trim().isEmpty() && !(newValue.equals("n/a") && "n/a".equals(existingValue));
     }
 
-    @Override
-    public DriverDTO updateDriverViaF1API(Long driverId, ExternalDriverDataDTO externalDriverData) {
-        return null;
-    }
-
-    @Override
-    public void deleteDriver(Long driverId) {
-        // TODO сделать ответ, чтобы понимать - успешное удаление или нет
-        // TODO сделать удаление не по id, по другому полю
-        Driver existingDriver = driverRepository.findById(driverId)
-                .orElseThrow(() -> new DataNotExistsException("Driver with id " + driverId + " not found"));
-
-        driverRepository.delete(existingDriver);
+    private boolean shouldUpdateField(Integer existingValue, Integer newValue) {
+        // Если новое значение не null и отличается от старого, то обновляем
+        return newValue != null && !newValue.equals(existingValue);
     }
 
     private void validateDriverDTO(DriverDTO driverDTO) {
@@ -193,6 +385,7 @@ public class DriverServiceImpl implements DriverService {
         }
     }
 
+    // TODO Убрать дублирование кода (рефлексия?)
     private void handleNullFields(DriverDTO driverDTO) {
         if (driverDTO.getFirstName() == null) {
             driverDTO.setFirstName("n/a");
@@ -217,6 +410,34 @@ public class DriverServiceImpl implements DriverService {
         }
         if (driverDTO.getHeadshotUrl() == null) {
             driverDTO.setHeadshotUrl("n/a");
+        }
+    }
+
+    // TODO Убрать дублирование кода (рефлексия?)
+    private void handleNullFields(Driver driver) {
+        if (driver.getFirstName() == null) {
+            driver.setFirstName("n/a");
+        }
+        if (driver.getLastName() == null) {
+            driver.setLastName("n/a");
+        }
+        if (driver.getDriverNumber() == null) {
+            driver.setDriverNumber(0);
+        }
+        if (driver.getBroadcastName() == null) {
+            driver.setBroadcastName("n/a");
+        }
+        if (driver.getFullName() == null) {
+            driver.setFullName("n/a");
+        }
+        if (driver.getNameAcronym() == null) {
+            driver.setNameAcronym("n/a");
+        }
+        if (driver.getCountryCode() == null) {
+            driver.setCountryCode("n/a");
+        }
+        if (driver.getHeadshotUrl() == null) {
+            driver.setHeadshotUrl("n/a");
         }
     }
 }

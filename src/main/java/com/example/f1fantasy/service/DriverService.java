@@ -2,7 +2,7 @@ package com.example.f1fantasy.service;
 
 import com.example.f1fantasy.model.dto.DriverDTO;
 import com.example.f1fantasy.model.dto.filter.DriverFilterDTO;
-import com.example.f1fantasy.model.dto.external.ExternalDriverDataDTO;
+import com.example.f1fantasy.model.dto.util.DriverCreationResponseDTO;
 
 import java.util.List;
 
@@ -28,33 +28,33 @@ public interface DriverService {
 
     /**
      * Create drivers list via the F1 API.
+     *
      * @param year the year of season start
      * @return the created list of drivers
      */
-    List<DriverDTO> createDriversViaF1API(Integer year);
+    DriverCreationResponseDTO createDriversViaF1API(Integer year);
 
     /**
      * Update a driver's information manually.
      *
-     * @param driverId  - the driver's ID
+     * @param fullName  - the driver's full name
      * @param driverDTO - the updated driver's data
      * @return the updated driver data
      */
-    DriverDTO updateDriver(Long driverId, DriverDTO driverDTO);
+    DriverDTO updateDriver(String fullName, DriverDTO driverDTO);
 
     /**
      * Update a driver's information via the F1 API.
      *
-     * @param driverId           - the driver's ID
-     * @param externalDriverData - the updated driver's data obtained via the F1 API
+     * @param year the year of season start
      * @return the updated driver data
      */
-    DriverDTO updateDriverViaF1API(Long driverId, ExternalDriverDataDTO externalDriverData);
+    List<DriverDTO> updateDriversViaF1API(Integer year);
 
     /**
      * Delete a driver.
      *
-     * @param driverId - the driver's ID
+     * @param fullName - the driver's full name
      */
-    void deleteDriver(Long driverId);
+    void deleteDriver(String fullName);
 }

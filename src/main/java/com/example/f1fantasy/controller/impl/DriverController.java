@@ -3,7 +3,7 @@ package com.example.f1fantasy.controller.impl;
 import com.example.f1fantasy.controller.DriverControllerAPI;
 import com.example.f1fantasy.model.dto.DriverDTO;
 import com.example.f1fantasy.model.dto.filter.DriverFilterDTO;
-import com.example.f1fantasy.model.dto.external.ExternalDriverDataDTO;
+import com.example.f1fantasy.model.dto.util.DriverCreationResponseDTO;
 import com.example.f1fantasy.service.DriverService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,31 +58,30 @@ public class DriverController implements DriverControllerAPI {
 
     @Override
     @PostMapping("/list/via-f1-api")
-    public ResponseEntity<List<DriverDTO>> createDriversViaF1API(Integer year) {
-        List<DriverDTO> createdDrivers = driverService.createDriversViaF1API(year);
+    public ResponseEntity<DriverCreationResponseDTO> createDriversViaF1API(Integer year) {
+        DriverCreationResponseDTO createdDrivers = driverService.createDriversViaF1API(year);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdDrivers);
     }
 
     @Override
-    @PutMapping("/{driverId}")
-    public ResponseEntity<DriverDTO> updateDriverManually(@PathVariable Long driverId,
+    @PutMapping("/{fullName}")
+    public ResponseEntity<DriverDTO> updateDriverManually(@PathVariable String fullName,
                                                           @Valid @RequestBody DriverDTO driverDTO) {
-        DriverDTO updatedDriver = driverService.updateDriver(driverId, driverDTO);
+        DriverDTO updatedDriver = driverService.updateDriver(fullName, driverDTO);
         return ResponseEntity.ok(updatedDriver);
     }
 
     @Override
-    @PutMapping("/{driverId}/via-f1-api")
-    public ResponseEntity<DriverDTO> updateDriverViaF1API(@PathVariable Long driverId,
-                                                          @Valid @RequestBody ExternalDriverDataDTO externalDriverData) {
-        DriverDTO updatedDriver = driverService.updateDriverViaF1API(driverId, externalDriverData);
-        return ResponseEntity.ok(updatedDriver);
+    @PutMapping("/list/via-f1-api")
+    public ResponseEntity<List<DriverDTO>> updateDriversViaF1API(Integer year) {
+        List<DriverDTO> updatedDrivers = driverService.updateDriversViaF1API(year);
+        return ResponseEntity.ok(updatedDrivers);
     }
 
     @Override
-    @DeleteMapping("/{driverId}")
-    public ResponseEntity<Void> deleteDriverManually(@PathVariable Long driverId) {
-        driverService.deleteDriver(driverId);
-        return ResponseEntity.noContent().build();
+    @DeleteMapping("/{fullName}")
+    public ResponseEntity<String> deleteDriverManually(@PathVariable String fullName) {
+        driverService.deleteDriver(fullName);
+        return ResponseEntity.ok("Driver " + fullName + " deleted successfully");
     }
 }

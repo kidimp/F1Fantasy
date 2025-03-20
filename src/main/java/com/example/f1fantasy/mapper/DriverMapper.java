@@ -21,8 +21,6 @@ public interface DriverMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntityFromDTO(DriverDTO driverDTO, @MappingTarget Driver driver);
 
-    List<Driver> toDriverList(List<DriverDTO> driverDTOList);
-
     @Mapping(source = "broadcastName", target = "broadcastName")
     @Mapping(source = "firstName", target = "firstName")
     @Mapping(source = "lastName", target = "lastName")
@@ -33,5 +31,7 @@ public interface DriverMapper {
     @Mapping(source = "headshotUrl", target = "headshotUrl")
     DriverDTO toDriverDTO(ExternalDriverDataDTO externalDriverData);
 
-    List<DriverDTO> toDriverDTOList(List<ExternalDriverDataDTO> externalDriverDataList);
+    List<DriverDTO> toDriverDTOListFromExternal(List<ExternalDriverDataDTO> externalDriverDataList);
+
+    List<DriverDTO> toDriverDTOListFromEntities(List<Driver> drivers);
 }

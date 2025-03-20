@@ -1,5 +1,6 @@
 package com.example.f1fantasy.config;
 
+import com.example.f1fantasy.exception.ExternalApiException;
 import feign.Response;
 import feign.codec.ErrorDecoder;
 
@@ -9,10 +10,14 @@ public class CustomErrorDecoder implements ErrorDecoder {
 
     @Override
     public Exception decode(String methodKey, Response response) {
-        if (response.status() == 404) {
-            return new RuntimeException("Resource not found: " + methodKey);
-        }
-        // Можно добавить обработку других ошибок
-        return defaultDecoder.decode(methodKey, response);
+        return switch (response.status()) {
+            case 400 -> new RuntimeException("Bad request while calling: " + methodKey + ". Please check your input.");
+            case 404 -> new RuntimeException("Resource not found: " + methodKey);
+            case 500 -> new ExternalApiException("The external API is currently unavailable.");
+            case 503 -> new ExternalApiException("The external service is temporarily unavailable.");
+            default ->
+                // Для всех других ошибок используем стандартный обработчик
+                    defaultDecoder.decode(methodKey, response);
+        };
     }
 }
